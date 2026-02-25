@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Bible</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <style>
+        body { background-color: #000000; color: #ffffff; font-family: ui-sans-serif, system-ui, sans-serif; }
+        .cocktail-button { background-color: #1a1a1a; border-radius: 12px; transition: background-color 0.1s; }
+        .cocktail-button:active { background-color: #333333; }
+        .house-tag { color: #fbbf24; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-right: 8px; }
+        input { background-color: #1a1a1a !important; color: white !important; border-radius: 12px !important; }
+        .chevron { width: 16px; height: 16px; fill: none; stroke: #666; stroke-width: 2.5; stroke-linecap: round; transition: transform 0.2s; }
+        .open .chevron { transform: rotate(180deg); stroke: #fbbf24; }
+        
+        /* Modal Animation */
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .animate-in { animation: fadeIn 0.2s ease-out forwards; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script>
+        const { useState, useMemo } = React;
+
+        const Icons = {
+            QrCode: (p) => React.createElement('svg', { ...p, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, 
+                React.createElement('rect', { width: "5", height: "5", x: "3", y: "3", rx: "1" }),
+                React.createElement('rect', { width: "5", height: "5", x: "16", y: "3", rx: "1" }),
+                React.createElement('rect', { width: "5", height: "5", x: "3", y: "16", rx: "1" }),
+                React.createElement('path', { d: "M21 16h-3a2 2 0 0 0-2 2v3M12 7v3a2 2 0 0 1-2 2H7M3 12h.01M12 3h.01M12 16v.01" })),
+            X: (p) => React.createElement('svg', { ...p, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2.5", strokeLinecap: "round", strokeLinejoin: "round" }, 
+                React.createElement('path', { d: "M18 6 6 18M6 6l12 12" }))
+        };
+
+        const DATA = [
+            // --- HOUSE SIGNATURES ---
+            { name: "Grapefruit Cooler", isHouse: true, glass: "Collins", garnish: "Grapefruit Wedge", recipe: "1 oz Aperol, 1 oz Dry Vermouth, 1 oz Grapefruit Juice, 0.5 oz Lime, Top with Soda.", method: "Build in glass. Stir 5s. Top with soda." },
+            { name: "Strawberry-Hibiscus Tea Spritz", isHouse: true, glass: "Wine Glass", garnish: "Mint + Strawberry", recipe: "0.75 oz Strawberry Syrup, 1.75 oz Tea Blend, 2 Dashes Peychaud's, 2 Drops Saline, Top Soda.", method: "Lift once with spoon. Zero proof." },
+            { name: "Strawberry ShortCake Soda", isHouse: true, glass: "16 oz Cup", garnish: "Layered Cream", recipe: "Sprite, 0.5 oz Strawberry Sauce, 0.5 oz Vanilla Cold Cream.", method: "Ice first. Cascade sauce. Float cream." },
+            { name: "Pineapple Coconut Sour", isHouse: true, glass: "Double Rocks", garnish: "Lime Zest + Mint", recipe: "1.5 oz Bacardi, 1 oz Pineapple, 0.5 oz Cucumber, 0.25 oz Lime, 0.5 oz Coconut Liqueur.", method: "Shake hard. Fine strain over big rock." },
+            { name: "Banana-Aged Rum Old Fashioned", isHouse: true, glass: "Rocks", garnish: "Orange Peel + Banana Chip", recipe: "2 oz Aged Rum, 0.25 oz Banana Syrup, 2 dashes Angostura, 1 dash Chocolate Bitters.", method: "Stir 20s. Strain over large rock." },
+            { name: "Pineapple Coconut Sour (Zero Proof)", isHouse: true, glass: "Rocks", garnish: "Lime Zest", recipe: "1.25 oz Pineapple, 1 oz Cucumber Water, 0.75 oz Green Tea, 0.25 oz Coconut Purée, 0.5 oz Lime.", method: "Build in glass over ice." },
+            
+            // --- CLASSICS ---
+            { name: "Old Fashioned", glass: "Rocks", garnish: "Orange Twist", recipe: "2 oz Bourbon, 2 dashes Angostura, 1 sugar cube, splash water.", method: "Muddle sugar. Stir with ice." },
+            { name: "Manhattan", glass: "Coupe", garnish: "Luxardo Cherry", recipe: "2 oz Rye, 1 oz Sweet Vermouth, 2 dashes Angostura.", method: "Stir with ice. Strain." },
+            { name: "Martini", glass: "Martini Glass", garnish: "Lemon Twist or Olives", recipe: "2.5 oz Gin, 0.5 oz Dry Vermouth.", method: "Stir with ice. Strain." },
+            { name: "Negroni", glass: "Rocks", garnish: "Orange Peel", recipe: "1 oz Gin, 1 oz Campari, 1 oz Sweet Vermouth.", method: "Stir. Strain over fresh ice." },
+            { name: "Daiquiri", glass: "Coupe", garnish: "Lime Wheel", recipe: "2 oz White Rum, 1 oz Lime, 0.75 oz Simple.", method: "Shake. Strain." },
+            { name: "Margarita", glass: "Rocks", garnish: "Salt Rim, Lime Wheel", recipe: "2 oz Blanco Tequila, 1 oz Lime, 0.5 oz Cointreau/Agave.", method: "Shake. Strain." },
+            { name: "Whiskey Sour", glass: "Rocks", garnish: "Cherry/Orange", recipe: "2 oz Bourbon, 0.75 oz Lemon, 0.5 oz Simple, Egg white.", method: "Shake hard. Strain." },
+            { name: "Sidecar", glass: "Coupe", garnish: "Sugar Rim", recipe: "1.5 oz Cognac, 0.75 oz Orange Liqueur, 0.75 oz Lemon.", method: "Shake. Strain." },
+            { name: "Boulevardier", glass: "Rocks", garnish: "Orange Twist", recipe: "1.5 oz Bourbon, 1 oz Campari, 1 oz Sweet Vermouth.", method: "Stir. Strain." },
+            { name: "Sazerac", glass: "Rocks", garnish: "Lemon Peel", recipe: "2 oz Rye, 1 tsp Sugar, 3 dashes Peychaud's, Absinthe rinse.", method: "Stir. Strain (no ice)." },
+            { name: "Tom Collins", glass: "Collins", garnish: "Lemon/Cherry", recipe: "2 oz Gin, 1 oz Lemon, 0.5 oz Simple, Soda water.", method: "Build in glass." },
+            { name: "Gimlet", glass: "Coupe", garnish: "Lime Wheel", recipe: "2 oz Gin, 0.75 oz Lime, 0.75 oz Simple.", method: "Shake. Strain." },
+            { name: "Aviation", glass: "Coupe", garnish: "Cherry", recipe: "2 oz Gin, 0.5 oz Maraschino, 0.25 oz Violette, 0.75 oz Lemon.", method: "Shake. Strain." },
+            { name: "Corpse Reviver No. 2", glass: "Coupe", garnish: "Lemon Peel", recipe: "0.75 oz Gin, Lillet Blanc, Cointreau, Lemon, Absinthe rinse.", method: "Shake. Strain." },
+            { name: "French 75", glass: "Flute", garnish: "Lemon Twist", recipe: "1 oz Gin, 0.5 oz Lemon, 0.5 oz Simple, Champagne.", method: "Shake base. Top bubbles." },
+            { name: "Mai Tai", glass: "Double Rocks", garnish: "Mint/Spent Lime", recipe: "2 oz Aged Rum, 0.75 oz Lime, 0.5 oz Curaçao, 0.25 oz Orgeat.", method: "Shake. Crushed ice." },
+            { name: "Mint Julep", glass: "Julep Tin", garnish: "Large Mint", recipe: "2 oz Bourbon, 0.25 oz Simple, 8 Mint leaves.", method: "Muddle mint. Churn with crushed ice." },
+            { name: "Vieux Carré", glass: "Rocks", garnish: "Lemon/Cherry", recipe: "1 oz Rye, 1 oz Cognac, 1 oz Sweet Vermouth, Bénédictine, Bitters.", method: "Stir. Strain." },
+            { name: "Clover Club", glass: "Coupe", garnish: "Raspberry", recipe: "2 oz Gin, 0.5 oz Raspberry Syrup, 0.75 oz Lemon, Egg white.", method: "Shake hard. Strain." },
+            { name: "Ramos Gin Fizz", glass: "Collins", garnish: "Orange Blossom scent", recipe: "2 oz Gin, Lemon/Lime, 1 oz Cream, Egg white, Soda.", method: "Long shake. Top soda." },
+            { name: "Pisco Sour", glass: "Coupe", garnish: "3 dots Bitters", recipe: "2 oz Pisco, 1 oz Lime, 0.75 oz Simple, Egg white.", method: "Shake hard. Strain." },
+            { name: "Caipirinha", glass: "Rocks", garnish: "Lime Wedges", recipe: "2 oz Cachaça, 1 Lime, 2 tsp Sugar.", method: "Muddle lime/sugar. Build." },
+            { name: "Moscow Mule", glass: "Copper Mug", garnish: "Lime/Mint", recipe: "2 oz Vodka, 0.5 oz Lime, Ginger Beer.", method: "Build in mug. Stir." },
+            { name: "Dark ’n Stormy", glass: "Highball", garnish: "Lime Wedge", recipe: "2 oz Black Rum, Ginger Beer.", method: "Build. Float rum." },
+            { name: "Singapore Sling", glass: "Highball", garnish: "Pineapple/Cherry", recipe: "1.5 oz Gin, Heering, Cointreau, Bénédictine, Juice.", method: "Shake. Strain." },
+            { name: "Paloma", glass: "Highball", garnish: "Grapefruit/Salt", recipe: "2 oz Tequila, 0.5 oz Lime, Grapefruit Soda.", method: "Build. Salt rim." },
+            { name: "Bloody Mary", glass: "Highball", garnish: "Celery/Lemon", recipe: "2 oz Vodka, 4 oz Tomato, Spices, Lemon.", method: "Roll (don't shake)." },
+            { name: "Espresso Martini", glass: "Coupe", garnish: "3 Coffee Beans", recipe: "1.5 oz Vodka, 1 oz Espresso, 0.75 oz Coffee Liqueur.", method: "Shake hard. Strain." },
+            { name: "Piña Colada", glass: "Hurricane", garnish: "Pineapple/Cherry", recipe: "2 oz Rum, 1.5 oz Coconut Cream, 1.5 oz Pineapple.", method: "Shake or Blend." },
+            { name: "Bellini", glass: "Flute", garnish: "None", recipe: "2 oz Peach Puree, 4 oz Prosecco.", method: "Build. Gentle stir." },
+            { name: "Kir Royale", glass: "Flute", garnish: "None", recipe: "0.25 oz Crème de Cassis, Champagne.", method: "Build." },
+            { name: "Americano", glass: "Highball", garnish: "Orange Slice", recipe: "1.5 oz Campari, 1.5 oz Sweet Vermouth, Soda.", method: "Build. Stir." },
+            { name: "Last Word", glass: "Coupe", garnish: "Cherry", recipe: "0.75 oz Gin, Green Chartreuse, Maraschino, Lime.", method: "Shake. Strain." },
+            { name: "Brandy Alexander", glass: "Coupe", garnish: "Nutmeg", recipe: "1 oz Cognac, 1 oz Crème de Cacao, 1 oz Cream.", method: "Shake. Strain." },
+            { name: "Cosmopolitan", glass: "Coupe", garnish: "Orange Twist", recipe: "1.5 oz Citron Vodka, 1 oz Cointreau, 0.5 oz Lime, Cranberry.", method: "Shake. Strain." },
+            { name: "Penicillin", glass: "Rocks", garnish: "Ginger", recipe: "2 oz Scotch, 0.75 oz Lemon, Honey-Ginger, Islay Float.", method: "Shake base. Float peated scotch." },
+            { name: "Rusty Nail", glass: "Rocks", garnish: "Lemon Twist", recipe: "1.5 oz Scotch, 0.75 oz Drambuie.", method: "Build or Stir." },
+            { name: "El Presidente", glass: "Coupe", garnish: "Orange Twist", recipe: "1.5 oz White Rum, Dry Vermouth, Curaçao, Grenadine.", method: "Stir. Strain." },
+            { name: "Painkiller", glass: "Tiki Mug", garnish: "Nutmeg/Pineapple", recipe: "2 oz Navy Rum, 4 oz Pineapple, 1 oz Orange, 1 oz Coconut.", method: "Shake. Crushed ice." },
+            { name: "Bee’s Knees", glass: "Coupe", garnish: "Lemon Twist", recipe: "2 oz Gin, 0.75 oz Lemon, 0.75 oz Honey Syrup.", method: "Shake. Strain." },
+            { name: "White Lady", glass: "Coupe", garnish: "Lemon Twist", recipe: "1.5 oz Gin, 0.75 oz Cointreau, 0.75 oz Lemon.", method: "Shake. Strain." },
+            { name: "Jungle Bird", glass: "Rocks", garnish: "Pineapple Fronds", recipe: "1.5 oz Dark Rum, 0.75 oz Campari, 1.5 oz Pineapple, Lime.", method: "Shake. Strain." },
+            { name: "Tuxedo", glass: "Coupe", garnish: "Cherry", recipe: "2 oz Old Tom Gin, 1 oz Dry Vermouth, Maraschino, Absinthe.", method: "Stir. Strain." },
+            { name: "Godfather", glass: "Rocks", garnish: "None", recipe: "2 oz Scotch, 0.25 oz Amaretto.", method: "Build. Stir." },
+            { name: "Southside", glass: "Coupe", garnish: "Mint Leaf", recipe: "2 oz Gin, 0.75 oz Lemon, 0.75 oz Simple, Mint.", method: "Shake. Strain." },
+            { name: "Harvey Wallbanger", glass: "Highball", garnish: "Orange/Cherry", recipe: "1.5 oz Vodka, 4 oz Orange Juice, 0.5 oz Galliano float.", method: "Build base. Float liqueur." },
+            { name: "Irish Coffee", glass: "Coffee Glass", garnish: "Cream", recipe: "1.5 oz Irish Whiskey, 4 oz Coffee, Sugar, Cream.", method: "Build. Float cream." },
+            { name: "Hanky Panky", glass: "Coupe", garnish: "Orange Twist", recipe: "1.5 oz Gin, 1.5 oz Sweet Vermouth, Fernet.", method: "Stir. Strain." },
+            { name: "Black Russian", glass: "Rocks", garnish: "None", recipe: "2 oz Vodka, 1 oz Coffee Liqueur.", method: "Build. Stir." },
+            { name: "White Russian", glass: "Rocks", garnish: "None", recipe: "2 oz Vodka, 1 oz Coffee Liqueur, 1 oz Cream.", method: "Build. Stir." },
+            { name: "Paper Plane", glass: "Coupe", garnish: "Lemon", recipe: "0.75 oz Bourbon, Nonino, Aperol, Lemon.", method: "Shake. Strain." },
+            { name: "Naked & Famous", glass: "Coupe", garnish: "Lime Wheel", recipe: "0.75 oz Mezcal, Yellow Chartreuse, Aperol, Lime.", method: "Shake. Strain." },
+            { name: "Gold Rush", glass: "Rocks", garnish: "Lemon Twist", recipe: "2 oz Bourbon, 0.75 oz Lemon, 0.75 oz Honey.", method: "Shake. Strain." },
+            { name: "Old Pal", glass: "Coupe", garnish: "Lemon Twist", recipe: "1 oz Rye, 1 oz Dry Vermouth, 1 oz Campari.", method: "Stir. Strain." },
+            { name: "Division Bell", glass: "Coupe", garnish: "Grapefruit Twist", recipe: "1 oz Mezcal, 0.75 oz Aperol, 0.5 oz Maraschino, Lime.", method: "Shake. Strain." },
+            { name: "Oaxaca Old Fashioned", glass: "Rocks", garnish: "Orange Twist", recipe: "1.5 oz Tequila, 0.5 oz Mezcal, Agave, Bitters.", method: "Stir. Strain." },
+            { name: "Tommy’s Margarita", glass: "Rocks", garnish: "Lime Wedge", recipe: "2 oz Tequila, 1 oz Lime, 0.5 oz Agave Nectar.", method: "Shake. Strain." },
+            { name: "Trinidad Sour", glass: "Coupe", garnish: "None", recipe: "1.5 oz Angostura, 1 oz Orgeat, 0.75 oz Lemon, 0.5 oz Rye.", method: "Shake hard. Strain." },
+            { name: "Black Manhattan", glass: "Coupe", garnish: "Cherry", recipe: "2 oz Rye, 1 oz Averna, Bitters.", method: "Stir. Strain." },
+            { name: "Breakfast Martini", glass: "Coupe", garnish: "Orange Peel", recipe: "1.5 oz Gin, 0.5 oz Cointreau, 0.5 oz Lemon, Marmalade.", method: "Shake hard. Strain." },
+            { name: "Spicy Margarita", glass: "Rocks", garnish: "Jalapeño", recipe: "2 oz Tequila, 1 oz Lime, 0.75 oz Agave, Jalapeño.", method: "Muddle. Shake." },
+            { name: "Mezcal Negroni", glass: "Rocks", garnish: "Grapefruit Twist", recipe: "1 oz Mezcal, 1 oz Campari, 1 oz Sweet Vermouth.", method: "Stir. Strain." },
+            { name: "Clarified Milk Punch", glass: "Rocks", garnish: "Nutmeg", recipe: "Batch spec.", method: "Pour over large rock." },
+            { name: "Hotel Nacional", glass: "Coupe", garnish: "Lime Wheel", recipe: "1.5 oz Rum, 0.5 oz Apricot Brandy, Pineapple, Lime.", method: "Shake. Strain." },
+            { name: "Toronto", glass: "Coupe", garnish: "Orange Twist", recipe: "2 oz Rye, 0.25 oz Fernet, Simple, Bitters.", method: "Stir. Strain." },
+            { name: "Bijou", glass: "Coupe", garnish: "Lemon/Cherry", recipe: "1 oz Gin, Vermouth, Green Chartreuse.", method: "Stir. Strain." },
+            { name: "Bamboo", glass: "Coupe", garnish: "Lemon Twist", recipe: "1.5 oz Sherry, 1.5 oz Dry Vermouth, Bitters.", method: "Stir. Strain." },
+            { name: "Adonis", glass: "Coupe", garnish: "Orange Twist", recipe: "1.5 oz Sherry, Sweet Vermouth, Bitters.", method: "Stir. Strain." },
+            { name: "Widow’s Kiss", glass: "Coupe", garnish: "Cherry", recipe: "1.5 oz Calvados, Bénédictine, Chartreuse.", method: "Stir. Strain." },
+            { name: "Zombie", glass: "Tiki Mug", garnish: "Mint/Pineapple", recipe: "Rum Blend, Citrus, Spices, Absinthe.", method: "Shake. Crushed ice." },
+            { name: "Planter’s Punch", glass: "Highball", garnish: "Orange/Cherry", recipe: "2 oz Dark Rum, Lime, Simple, Bitters.", method: "Shake. Strain." },
+            { name: "Brown Derby", glass: "Coupe", garnish: "Grapefruit Twist", recipe: "1.5 oz Bourbon, 1 oz Grapefruit Juice, 0.5 oz Honey.", method: "Shake. Strain." },
+            { name: "Algonquin", glass: "Coupe", garnish: "None", recipe: "1.5 oz Rye, 0.75 oz Dry Vermouth, Pineapple.", method: "Shake. Strain." },
+            { name: "Scofflaw", glass: "Coupe", garnish: "Lemon Twist", recipe: "1.5 oz Rye, Vermouth, Lemon, Grenadine.", method: "Shake. Strain." },
+            { name: "Vesper", glass: "Coupe", garnish: "Lemon Peel", recipe: "3 oz Gin, 1 oz Vodka, 0.5 oz Lillet Blanc.", method: "Shake. Strain." },
+            { name: "Gibson", glass: "Martini", garnish: "Onion", recipe: "2.5 oz Gin, 0.5 oz Dry Vermouth.", method: "Stir. Strain." },
+            { name: "Dirty Martini", glass: "Martini", garnish: "Olives", recipe: "2.5 oz Gin, 0.5 oz Dry Vermouth, Brine.", method: "Stir. Strain." },
+            { name: "Revolver", glass: "Coupe", garnish: "Orange Peel", recipe: "2 oz Bourbon, 0.5 oz Coffee Liqueur, Bitters.", method: "Stir. Strain." },
+            { name: "Bramble", glass: "Rocks", garnish: "Blackberry", recipe: "2 oz Gin, 1 oz Lemon, 0.5 oz Simple, Mure float.", method: "Shake base. Float liqueur." },
+            { name: "Gin Basil Smash", glass: "Rocks", garnish: "Basil", recipe: "2 oz Gin, 1 oz Lemon, 0.75 oz Simple, Basil.", method: "Muddle. Shake hard." },
+            { name: "Amaretto Sour", glass: "Rocks", garnish: "Lemon/Cherry", recipe: "1.5 oz Amaretto, 0.75 oz Bourbon, 1 oz Lemon, Egg white.", method: "Shake hard. Strain." }
+        ];
+
+        function App() {
+            const [search, setSearch] = useState("");
+            const [openId, setOpenId] = useState(null);
+            const [showQR, setShowQR] = useState(false);
+
+            const filtered = useMemo(() => {
+                const t = search.toLowerCase().trim();
+                const list = [...DATA].sort((a, b) => {
+                    if (a.isHouse && !b.isHouse) return -1;
+                    if (!a.isHouse && b.isHouse) return 1;
+                    return a.name.localeCompare(b.name);
+                });
+                if (!t) return list;
+                return list.filter(c => c.name.toLowerCase().includes(t) || c.recipe.toLowerCase().includes(t));
+            }, [search]);
+
+            // Logic for permanent host detection
+            const currentUrl = window.location.href;
+            const qrUrl = `const qrUrl = "https://legendsfb.github.io/staff-bible/"`;
+
+            return React.createElement('div', { className: "max-w-xl mx-auto p-4 min-h-screen pb-20" },
+                // Header with QR Trigger
+                React.createElement('div', { className: "sticky top-0 bg-black pt-4 pb-6 z-10 flex items-center justify-between" },
+                    React.createElement('h1', { className: "text-xl font-bold uppercase tracking-widest" }, "Staff Bible"),
+                    React.createElement('button', { 
+                        onClick: () => setShowQR(true),
+                        className: "p-2 bg-zinc-800 rounded-full text-zinc-400 hover:text-amber-500" 
+                    }, React.createElement(Icons.QrCode, { size: 24 }))
+                ),
+
+                React.createElement('input', {
+                    type: "text",
+                    placeholder: "Search all 87 recipes...",
+                    className: "w-full p-4 text-lg outline-none border-none mb-6",
+                    value: search,
+                    onChange: (e) => { setSearch(e.target.value); setOpenId(null); }
+                }),
+
+                // List
+                React.createElement('div', { className: "space-y-2" },
+                    filtered.map((c, i) => {
+                        const isOpen = openId === i;
+                        return React.createElement('div', { key: c.name },
+                            React.createElement('button', {
+                                onClick: () => setOpenId(isOpen ? null : i),
+                                className: `w-full text-left p-5 flex items-center justify-between cocktail-button ${isOpen ? 'bg-zinc-800 open' : ''}`
+                            },
+                                React.createElement('div', { className: "flex items-center" },
+                                    c.isHouse && React.createElement('span', { className: "house-tag" }, "House"),
+                                    React.createElement('span', { className: `text-lg ${isOpen ? 'font-bold' : 'font-medium'}` }, c.name)
+                                ),
+                                React.createElement('svg', { className: "chevron", viewBox: "0 0 24 24" }, 
+                                    React.createElement('path', { d: "m6 9 6 6 6-6" })
+                                )
+                            ),
+                            isOpen && React.createElement('div', { className: "p-5 bg-zinc-900 rounded-b-xl -mt-2 space-y-4 border-t border-zinc-800 shadow-2xl" },
+                                React.createElement('div', null,
+                                    React.createElement('div', { className: "text-zinc-500 text-[10px] font-bold uppercase mb-1" }, "Recipe"),
+                                    React.createElement('p', { className: "text-xl font-bold text-white leading-tight" }, c.recipe)
+                                ),
+                                React.createElement('div', { className: "grid grid-cols-2 gap-4" },
+                                    React.createElement('div', null,
+                                        React.createElement('div', { className: "text-zinc-500 text-[10px] font-bold uppercase" }, "Glass"),
+                                        React.createElement('div', { className: "text-base font-medium text-neutral-200" }, c.glass)
+                                    ),
+                                    React.createElement('div', null,
+                                        React.createElement('div', { className: "text-zinc-500 text-[10px] font-bold uppercase" }, "Garnish"),
+                                        React.createElement('div', { className: "text-base font-medium text-neutral-200" }, c.garnish)
+                                    )
+                                ),
+                                React.createElement('div', { className: "pt-2 border-t border-zinc-800" },
+                                    React.createElement('div', { className: "text-zinc-500 text-[10px] font-bold uppercase mb-1" }, "Build Method"),
+                                    React.createElement('p', { className: "text-sm text-zinc-400 italic" }, c.method)
+                                )
+                            )
+                        );
+                    })
+                ),
+
+                // QR Modal Overlay
+                showQR && React.createElement('div', { className: "fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-6 backdrop-blur-sm" },
+                    React.createElement('div', { className: "bg-zinc-900 w-full max-w-xs p-8 rounded-[2rem] text-center border border-zinc-800 animate-in" },
+                        React.createElement('button', { 
+                            onClick: () => setShowQR(false),
+                            className: "absolute top-4 right-4 text-zinc-500" 
+                        }, React.createElement(Icons.X, { size: 28 })),
+                        React.createElement('div', { className: "bg-white p-4 rounded-3xl inline-block mb-6 shadow-2xl" },
+                            React.createElement('img', { src: qrUrl, className: "w-48 h-48", alt: "Access Code" })
+                        ),
+                        React.createElement('h2', { className: "text-lg font-bold uppercase mb-2" }, "Staff Access"),
+                        React.createElement('p', { className: "text-xs text-zinc-500" }, "Scan this code to sync this menu to your mobile device.")
+                    )
+                ),
+
+                React.createElement('footer', { className: "mt-20 py-10 text-center text-[9px] text-zinc-600 uppercase tracking-[0.4em]" }, "Locked Version • 87 Drinks")
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(App));
+    </script>
+</body>
+</html>
