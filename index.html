@@ -154,7 +154,15 @@
             return React.createElement('div', { className: "max-w-xl mx-auto p-4 min-h-screen pb-20" },
                 // Header with QR Trigger
                 React.createElement('div', { className: "sticky top-0 bg-black pt-4 pb-6 z-10 flex items-center justify-between" },
-                    React.createElement('h1', { className: "text-xl font-bold uppercase tracking-widest" }, "Staff Bible"),
+                    React.createElement('h1', { className: "text-xl font-bold uppercase tracking-widest" }, "Staff Bible"), React.createElement(
+  'button',
+  {
+    onClick: () => setShowQR(true),
+    className:
+      'mt-4 mb-6 px-4 py-3 rounded-2xl bg-zinc-800 text-white text-sm font-semibold uppercase tracking-wider border border-zinc-700'
+  },
+  'Show Staff QR'
+),
                     React.createElement('button', { 
                         onClick: () => setShowQR(true),
                         className: "p-2 bg-zinc-800 rounded-full text-zinc-400 hover:text-amber-500" 
@@ -235,3 +243,4 @@
 </body>
 
 </html>
+
