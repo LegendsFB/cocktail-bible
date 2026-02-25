@@ -161,12 +161,16 @@
     className:
       'mt-4 mb-6 px-4 py-3 rounded-2xl bg-zinc-800 text-white text-sm font-semibold uppercase tracking-wider border border-zinc-700'
   },
-  'Show Staff QR'
+  (new URLSearchParams(window.location.search).get('admin') === '1') &&
+React.createElement(
+  React.Fragment,
+  null,
+  'Show Staff QR',
+  React.createElement('button', {
+    onClick: () => setShowQR(true),
+    className: "p-2 bg-zinc-800 rounded-full text-zinc-400 hover:text-amber-500"
+  }, React.createElement(Icons.QrCode, { size: 24 }))
 ),
-                    React.createElement('button', { 
-                        onClick: () => setShowQR(true),
-                        className: "p-2 bg-zinc-800 rounded-full text-zinc-400 hover:text-amber-500" 
-                    }, React.createElement(Icons.QrCode, { size: 24 }))
                 ),
 
                 React.createElement('input', {
@@ -243,5 +247,6 @@
 </body>
 
 </html>
+
 
 
